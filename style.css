@@ -1,0 +1,40 @@
+QMainWindow
+{
+    /* background-color: black; */
+}
+
+#label_income, #label_income_number, #label_max_income, #label_max_income_number
+{
+    color: #54FF9F;
+}
+
+#label_expenses, #label_expenses_number, #label_max_expenses, #label_max_expenses_number
+{
+    color: #FF5349;
+}
+
+QPushButton
+{
+    font-size: 18px;
+    height: 50px;
+    border-radius: 20px;
+    background: #808080;
+    color: white;
+}
+
+QPushButton:hover
+{
+    color: white;
+    background: silver;
+}
+
+QGroupBox
+{
+    background: #646B63;
+    border-radius: 10px;
+}
+
+
+
+
+

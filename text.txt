@@ -1,0 +1,827 @@
+Файл form.cpp: 
+#include "form.h"
+#include "ui_form.h"
+Form::Form(QWidget *parent) :
+  QWidget(parent),
+  ui(new Ui::Form) {
+  ui->setupUi(this);
+  // ПРОВЕРКА НА ВВОД ВЕЩЕСТВЕННОГО ЧИСЛА
+  this->locale = QLocale::system();
+  locale.setNumberOptions(QLocale::RejectGroupSeparator | QLocale::OmitGroupSeparator);
+  this->validator = new QDoubleValidator(this);
+  this->validator->setLocale(locale);
+  // ПРОВЕРКА НА ВВОД ВЕЩЕСТВЕННОГО ЧИСЛА {
+Form::~Form() {
+  delete ui; {
+// ФУНКЦИЯ ПРОВЕРКИ ВВОДА ПОЛЬЗОВАТЕЛЯ
+double Form::Validation() {
+  QString text = ui->lineEdit->text();
+  qDebug() << "Изначальная строка: " << text;
+  text.replace(',','.');
+  double number = text.toDouble();
+  qDebug() << "Число после преобразования: " << number;
+  std::stringstream ss;
+  ss << number;
+  std::string str = ss.str();
+  size_t pos = str.find('.');
+  if (pos != string::npos) {
+    if ((str.length() - pos - 1 == 2) || (str.length() - pos - 1 == 1)) {
+      return number; {
+    else if (number > 10000) {
+      qDebug() << "Вот такое число не прошло: " << number;
+      throw std::invalid_argument("Число слишком большое"); {
+    else {
+      qDebug() << "Вот такое число не прошло: " << number;
+      throw std::invalid_argument("Допустимо только 2 цифры после запятой"); { {
+  else {
+    return number; { {
+// ФУНКЦИЯ ПРОВЕРКИ ВВОДА ПОЛЬЗОВАТЕЛЯ
+// ФУНКЦИЯ КНОПКИ ГОТОВО
+void Form::on_pushButton_ready_clicked() {
+  try {
+    if (this->change == "наличные") {
+      double number = Validation();
+      emit signalChangeCash(number); {
+    else if (this->change == "карта") {
+      double number = Validation();
+      emit signalChangeCard(number); {
+    else if (this->change == "категория дохода") {
+      emit signalAddCategoryIncome(ui->lineEdit->text()); {
+    else if (this->change == "категория расхода") {
+      emit signalAddCategoryExpenses(ui->lineEdit->text()); {
+    ui->lineEdit->clear();
+    ui->lineEdit->setValidator(0);
+    this->close(); {
+  catch(std::invalid_argument(&e)) {
+    QMessageBox::critical(this, "Ошибка", e.what());
+    ui->lineEdit->clear(); { {
+// ФУНКЦИЯ КНОПКИ ГОТОВО
+// СЛОТЫ ПЕРЕДАЧИ ВЫБОРА ПОЛЬЗОВАТЕЛЯ
+void Form::slotCash() {
+  ui->label->setText("Бюджет наличных: ");
+  this->change = "наличные";
+  ui->lineEdit->setValidator(this->validator); {
+void Form::slotCard() {
+  ui->label->setText("Бюджет карты: ");
+  this->change = "карта";
+  ui->lineEdit->setValidator(this->validator); {
+void Form::slotCategoryIncome() {
+  ui->label->setText("Категория дохода:");
+  this->change = "категория дохода"; {
+void Form::slotCategoryExpenses() {
+  ui->label->setText("Категория расхода:");
+  this->change = "категория расхода"; {
+// СЛОТЫ ПЕРЕДАЧИ ВЫБОРА ПОЛЬЗОВАТЕЛЯ
+// ФУНКЦИЯ КНОПКИ ОТМЕНА
+void Form::on_pushButton_cancellation_clicked() {
+  ui->lineEdit->clear();
+  ui->lineEdit->setValidator(0);
+  this->close(); {
+// ФУНКЦИЯ КНОПКИ ОТМЕНА
+ 
+Файл mainwindow.h: 
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+#include <QMainWindow>
+#include <QSqlDatabase>
+#include <QDebug>
+#include <QSqlQuery>
+#include <QSqlTableModel>
+#include <QString>
+#include <QVector>
+#include <iostream>
+#include <form.h>
+#include <transaction.h>
+#include <user.h>
+QT_BEGIN_NAMESPACE
+namespace Ui { class MainWindow; }
+QT_END_NAMESPACE
+class MainWindow : public QMainWindow {
+  Q_OBJECT
+public:
+  MainWindow(QWidget *parent = nullptr);
+  ~MainWindow();
+private slots:
+  void on_tableView_clicked(const QModelIndex &index);
+  void on_pushButton_change_cash_clicked();
+  void on_pushButton_change_card_clicked();
+  void on_pushButton_add_trans_clicked();
+  void on_pushButton_delete_trans_clicked();
+  void on_pushButton_exit_clicked();
+  void on_pushButton_add_income_category_clicked();
+  void on_pushButton_add_expenses_category_clicked();
+  void on_pushButton_delete_income_category_clicked();
+  void on_pushButton_delete_expenses_category_clicked();
+private:
+  Ui::MainWindow *ui;
+  QSqlDatabase db;
+  QSqlQuery *query;
+  QSqlTableModel *model_data;                     // модель для транзакций
+  QSqlTableModel *model_money;                    // модель для бюджета
+  QSqlTableModel *model_categories_income;              // модель для категорий ДОХОДА
+  QSqlTableModel *model_categories_expenses;              // модель для категорий РАСХОДА
+  Form *form;                             // класс формы для изменения бюджета
+  transaction *trans;                         // класс формы для добавления транзакции
+  int row;                              // номер выделенной строки
+  User *user;
+public slots:
+  void slotChangeCash(double number);
+  void slotChangeCard(double number);
+  void slotAddCategoryIncome(QString category);
+  void slotAddCategoryExpenses(QString category);
+  void slotTransaction(QString type, QString check, QString category, double price, QString comment, QDate date);
+signals:
+  void signalCash();                          // сигнал изменнения НАЛИЧНЫХ
+  void signalCard();                          // сигнал изменнения КАРТЫ
+  void signalCategoryIncome();                    // сигнал добавления КАТЕГОРИИ ДОХОДОВ
+  void signalCategoryExpenses();                    // сигнал добавления КАТЕГОРИИ РАСХОДА
+  void signalUpdate();
+};
+#endif // MAINWINDOW_H
+ 
+Файл form.h: 
+#ifndef FORM_H
+#define FORM_H
+#include <QWidget>
+#include <QDoubleValidator>
+#include <QMessageBox>
+#include <iostream>
+#include <sstream>
+#include <string>
+using namespace std;
+namespace Ui {
+class Form; {
+class Form : public QWidget {
+  Q_OBJECT
+public:
+  explicit Form(QWidget *parent = nullptr);
+  double Validation();
+  ~Form();
+private slots:
+  void on_pushButton_ready_clicked();
+  void on_pushButton_cancellation_clicked();
+private:
+  Ui::Form *ui;
+  QString change;
+  QValidator *validator;
+  QLocale locale;
+signals:
+  void signalChangeCash(double number);           // сигнал для изменения НАЛИЧНЫХ
+  void signalChangeCard(double number);           // сигнал для изменения КАРТЫ
+  void signalAddCategoryIncome(QString category);     // сигнал для добавления КАТЕГОРИИ ДОХОДА
+  void signalAddCategoryExpenses(QString category);     // сигнал для добавления КАТЕГОРИИ РАСХОДА
+public slots:
+  void slotCash();                    // слот для изменения НАЛИЧНЫХ
+  void slotCard();                    // слот для изменения КАРТЫ
+  void slotCategoryIncome();                // слот для изменения КАТЕГОРИИ ДОХОДА
+  void slotCategoryExpenses();              // слот для изменения КАТЕГОРИИ РАСХОДА
+};
+#endif // FORM_H
+ 
+Файл mainwindow.cpp: 
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+MainWindow::MainWindow(QWidget *parent)
+  : QMainWindow(parent)
+  , ui(new Ui::MainWindow) {
+  ui->setupUi(this);
+  user = new User;
+  // СОЗДАНИЕ БАЗЫ ДАННЫХ
+  db = QSqlDatabase::addDatabase("QSQLITE");
+  db.setDatabaseName("/Users/timofey/Desktop/CourseWork/build-Finance-Qt_6_6_0_for_macOS-Debug/data.db");
+  if(db.open()) {
+    qDebug("База данных открыта \n"); {
+  else {
+    qDebug("База данных НЕ открыта \n"); {
+  // СОЗДАНИЕ БАЗЫ ДАННЫХ
+  query = new QSqlQuery(db);
+  query->exec("CREATE TABLE Data(Id INT, Count TEXT, Type TEXT, Price DOUBLE, Category TEXT, Comment TEXT, Date DATE);");
+  query->exec("CREATE TABLE Money(Id INT, Cash DOUBLE, Card double, Income DOUBLE, Expenses DOUBLE);");
+  query->exec("CREATE TABLE Categorie_income(Id INT, Income_categories TEXT, Income_categories_money DOUBLE);");
+  query->exec("CREATE TABLE Categorie_expenses(Id INT, Expenses_categories TEXT, Expenses_categories_money DOUBLE);");
+  model_data = new QSqlTableModel(this, db);
+  model_data->setTable("Data");
+  model_data->select();
+  // БАЗА ДАННЫХ, КОТОРАЯ ХРАНИТ ИНФОРМАЦИЮ О БЮДЖЕТЕ
+  model_money = new QSqlTableModel(this, db);
+  model_money->setTable("Money");
+  model_money->select();
+  query->exec("SELECT COUNT(*) FROM Money");
+  if (query->next()) {
+    int count = query->value(0).toInt();
+    if (count == 0) {
+      qDebug() << "Создается таблица Money \n";
+      model_money->insertRow(0);
+      model_money->setData(model_money->index(0, 0), 1);
+      model_money->setData(model_money->index(0, 1), 0);
+      model_money->setData(model_money->index(0, 2), 0);
+      model_money->setData(model_money->index(0, 3), 0);
+      model_money->setData(model_money->index(0, 4), 0);
+      if (!model_money->submitAll()) {
+        qDebug() << "Ошибка при добавлении строки в таблицу Money \n"; { {
+    else {
+      qDebug() << "Таблица Money содержит " << count << " строк" << "\n"; { {
+  else {
+    qDebug() << "Ошибка при выполнении запроса: \n"; {
+  query->exec("SELECT Cash, Card, Income, Expenses FROM Money");
+  if (query->next()) {
+    this->user->setCash(query->value(0).toDouble());
+    this->user->setCard(query->value(1).toDouble());
+    this->user->setIncome(query->value(2).toDouble());
+    this->user->setExpenses(query->value(3).toDouble());
+    this->user->setMoney(query->value(0).toDouble() + query->value(1).toDouble());
+    qDebug() << this->user->getCard() << this->user->getCash() << this->user->getIncome() << this->user->getExpenses() << this->user->getMoney();
+    ui->label_money_number->setText(QString::number(user->getMoney()) + "$");
+    ui->label_card_number->setText(QString::number(user->getCard()) + "$");
+    ui->label_cash_number->setText(QString::number(user->getCash()) + "$");
+    ui->label_income_number->setText(QString::number(user->getIncome()) + "$");
+    ui->label_expenses_number->setText(QString::number(user->getExpenses()) + "$"); {
+  else {
+    qDebug() << "Ошибка при выполнении запроса: SELECT Cash, Card FROM Money \n"; {
+  // БАЗА ДАННЫХ, КОТОРАЯ ХРАНИТ ИНФОРМАЦИЮ О БЮДЖЕТЕ
+  model_categories_income = new QSqlTableModel(this, db);
+  model_categories_income->setTable("Categorie_income");
+  model_categories_income->select();
+  query->prepare("SELECT Income_categories, Income_categories_money FROM Categorie_income");
+  if (query->exec()) {
+    while(query->next()) {
+      this->user->categoriesIncome.push_back(query->value(0).toString());
+      this->user->categoriesIncomeMoney.push_back(query->value(1).toDouble());
+      ui->listWidget_income_name->addItem(query->value(0).toString());
+      ui->listWidget_income_money->addItem(query->value(1).toString() + "$"); { {
+  else {
+    qDebug() << "Ошибка во время выгрузки данных из Categorie_incom\n"; {
+  model_categories_expenses = new QSqlTableModel(this, db);
+  model_categories_expenses->setTable("Categorie_expenses");
+  model_categories_expenses->select();
+  query->prepare("SELECT Expenses_categories, Expenses_categories_money FROM Categorie_expenses");
+  if (query->exec()) {
+    while(query->next()) {
+      this->user->categoriesExpenses.push_back(query->value(0).toString());
+      this->user->categoriesExpensesMoney.push_back(query->value(1).toDouble());
+      ui->listWidget_expenses_name->addItem(query->value(0).toString());
+      ui->listWidget_expenses_money->addItem(query->value(1).toString() + "$"); { {
+  else {
+    qDebug() << "Ошибка во время выгрузки данных из Categorie_expenses\n"; {
+  for (int i = 0; i < this->user->categoriesExpenses.size(); ++i) {
+    qDebug() << "Категория = " << this->user->categoriesExpenses[i] << "Расход = " << this->user->categoriesExpensesMoney[i]; {
+  ui->tableView->setModel(model_data);                                      // ставит бд в виджет
+  ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+  ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+  ui->tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+  ui->tableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+  ui->tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed);
+  ui->tableView->horizontalHeader()->setStretchLastSection(false);
+  ui->tableView->horizontalHeader()->resizeSection(0, 40);
+  ui->tableView->horizontalHeader()->resizeSection(1, 60);
+  ui->tableView->horizontalHeader()->resizeSection(2, 100);
+  form = new Form;
+  connect(this, &MainWindow::signalCash, form, &Form::slotCash);                          // коннект для НАЛИЧНЫХ
+  connect(this, &MainWindow::signalCard, form, &Form::slotCard);                          // коннект для КАРТЫ
+  connect(this, &MainWindow::signalCategoryIncome, form, &Form::slotCategoryIncome);                // коннект для КАТЕГОРИИ ДОХОДА
+  connect(this, &MainWindow::signalCategoryExpenses, form, &Form::slotCategoryExpenses);              // коннект для КАТЕГОРИИ РАСХОДА
+  connect(form, &Form::signalChangeCash, this, &MainWindow::slotChangeCash);                    // коннект ддя изменения НАЛИЧНЫХ
+  connect(form, &Form::signalChangeCard, this, &MainWindow::slotChangeCard);                    // коннект ддя изменения КАРТЫ
+  connect(form, &Form::signalAddCategoryIncome, this, &MainWindow::slotAddCategoryIncome);            // коннект для добавления КАТЕГОРИИ ДОХОДА
+  connect(form, &Form::signalAddCategoryExpenses, this, &MainWindow::slotAddCategoryExpenses);          // коннект для добавления КАТЕГОРИИ РАСХОДА
+  trans = new transaction(this->user);
+  connect(trans, &transaction::signalTransaction, this, &MainWindow::slotTransaction);
+  connect(this, &MainWindow::signalUpdate, trans, &transaction::slotUpdate); {
+MainWindow::~MainWindow() {
+  query->prepare("UPDATE Money SET Cash = :cash, Card = :card, Income = :income, Expenses = :expenses WHERE id = 1");
+  query->bindValue(":cash", this->user->getCash());
+  query->bindValue(":card", this->user->getCard());
+  query->bindValue(":income", this->user->getIncome());
+  query->bindValue(":expenses", this->user->getExpenses());
+  // qDebug() << this->user->getCash() << this->user->getCard() << this->user->getIncome() << this->user->getExpenses();
+  if (!query->exec()) {
+    qDebug() << "Ошибка во время обновления данных таблицы Money\n"; {
+  else {
+    qDebug() << "Обновление данных Money прошла успешно \n"; {
+  model_money->select();
+  query->exec("DELETE FROM Categorie_income");
+  for (int i = 0; i < this->user->categoriesIncome.size(); ++i) {
+    query->prepare("INSERT INTO Categorie_income (Id, Income_categories, Income_categories_money) VALUES (:id, :category, :money)");
+    query->bindValue(":category", this->user->categoriesIncome[i]);
+    query->bindValue(":money", this->user->categoriesIncomeMoney[i]);
+    query->bindValue(":id", i+1);
+    if (!query->exec()) {
+      qDebug() << "Ошибка во время обновления таблицы Categorie_income"; { {
+  model_categories_income->select();
+  query->exec("DELETE FROM Categorie_expenses");
+  for (int i = 0; i < this->user->categoriesExpenses.size(); ++i) {
+    query->prepare("INSERT INTO Categorie_expenses (Id, Expenses_categories, Expenses_categories_money) VALUES (:id, :category, :money)");
+    query->bindValue(":category", this->user->categoriesExpenses[i]);
+    query->bindValue(":money", this->user->categoriesExpensesMoney[i]);
+    query->bindValue(":id", i+1);
+    if (!query->exec()) {
+      qDebug() << "Ошибка во время обновления таблицы Categorie_expenses"; { {
+  model_categories_expenses->select();
+  delete ui; {
+// КНОПКА ДОБАВЛЕНИЯ ТРАНЗАКЦИИ
+void MainWindow::on_pushButton_add_trans_clicked() {
+  emit signalUpdate();
+  trans->show(); {
+// КНОПКА ДОБАВЛЕНИЯ ТРАНЗАКЦИИ
+// СЛОТ ДОБАВЛЕНИЯ ТРАНЗАКЦИИ
+void MainWindow::slotTransaction(QString type, QString check, QString category, double price, QString comment, QDate date) {
+  model_data->insertRow(model_data->rowCount());
+  int id = 0;
+  query->exec("SELECT id FROM Data ORDER BY id DESC LIMIT 1");
+  if (query->next()) {
+    id = query->value(0).toInt();
+    qDebug() << "ID = " << id; {
+  else {
+    qDebug() << "Ошибка во время получения последнего ID базы транзакций \n"; {
+  id = id + 1;
+  model_data->setData(model_data->index(model_data->rowCount()-1, model_data->fieldIndex("Type")), type);
+  model_data->setData(model_data->index(model_data->rowCount()-1, model_data->fieldIndex("Count")), check);
+  model_data->setData(model_data->index(model_data->rowCount()-1, model_data->fieldIndex("Category")), category);
+  model_data->setData(model_data->index(model_data->rowCount()-1, model_data->fieldIndex("Price")), price);
+  model_data->setData(model_data->index(model_data->rowCount()-1, model_data->fieldIndex("Comment")), comment);
+  model_data->setData(model_data->index(model_data->rowCount()-1, model_data->fieldIndex("Date")), date);
+  model_data->setData(model_data->index(model_data->rowCount()-1, model_data->fieldIndex("id")), id);
+  model_data->submitAll();
+  if (check == "+") {
+    if (type == "наличные") {
+      this->user->setCash(this->user->getCash() + price);
+      ui->label_cash_number->setText(QString::number(this->user->getCash()) + "$");
+      this->user->setIncome(this->user->getIncome() + price);
+      ui->label_income_number->setText(QString::number(this->user->getIncome()) + "$");
+      qDebug() << "Пополнение НАЛИЧНЫХ = " << this->user->getCash()
+           << "Пополнение ДОХОДОВ = " << this->user->getIncome()
+           << "\n"; {
+    else {
+      this->user->setCard(this->user->getCard() + price);
+      ui->label_card_number->setText(QString::number(this->user->getCard()) + "$");
+      this->user->setIncome(this->user->getIncome() + price);
+      ui->label_income_number->setText(QString::number(this->user->getIncome()) + "$");
+      qDebug() << "Пополнение КАРТЫ" << this->user->getCard()
+           << "Пополнение ДОХОДОВ = " << this->user->getIncome()
+           << "\n"; {
+    for (int i = 0; i < this->user->categoriesIncome.size(); ++i) {
+      if (this->user->categoriesIncome[i] == category) {
+        this->user->categoriesIncomeMoney[i] = this->user->categoriesIncomeMoney[i] + price;
+        for(int j = 0; j < ui->listWidget_income_name->count(); ++j) {
+          QListWidgetItem* item = ui->listWidget_income_name->item(j);
+          if (item->text() == category) {
+            QListWidgetItem* item2 = ui->listWidget_income_money->item(j);
+            if (item2) {
+              item2->setText(QString::number(this->user->categoriesIncomeMoney[i]) + "$"); { { { { { {
+  else {
+    if (type == "наличные") {
+      this->user->setCash(this->user->getCash() - price);
+      ui->label_cash_number->setText(QString::number(this->user->getCash()) + "$");
+      this->user->setExpenses(this->user->getExpenses() + price);
+      ui->label_expenses_number->setText(QString::number(this->user->getExpenses()) + "$");
+      qDebug() << "Трата НАЛИЧНЫХ" << this->user->getCash()
+           << "Пополнение РАСХОДОВ" << this->user->getExpenses()
+           << "\n"; {
+    else {
+      this->user->setCard(this->user->getCard() - price);
+      ui->label_card_number->setText(QString::number(this->user->getCard()) + "$");
+      this->user->setExpenses(this->user->getExpenses() + price);
+      ui->label_expenses_number->setText(QString::number(this->user->getExpenses()) + "$");
+      qDebug() << "Трата КАРТЫ" << this->user->getCard()
+           << "Пополнение РАСХОДОВ" << this->user->getExpenses()
+           << "\n"; {
+    for (int i = 0; i < this->user->categoriesExpenses.size(); ++i) {
+      if (this->user->categoriesExpenses[i] == category) {
+        this->user->categoriesExpensesMoney[i] = this->user->categoriesExpensesMoney[i] + price;
+        for(int j = 0; j < ui->listWidget_expenses_name->count(); ++j) {
+          QListWidgetItem* item = ui->listWidget_expenses_name->item(j);
+          if (item->text() == category) {
+            QListWidgetItem* item2 = ui->listWidget_expenses_money->item(j);
+            if (item2) {
+              item2->setText(QString::number(this->user->categoriesExpensesMoney[i]) + "$"); { { { { { {
+  this->user->setMoney(this->user->getCard() + this->user->getCash());
+  ui->label_money_number->setText(QString::number(this->user->getMoney()) + "$"); {
+// СЛОТ ДОБАВЛЕНИЯ ТРАНЗАКЦИИ
+// КНОПКА УДАЛЕНИЯ ТРАНЗАКЦИИ
+void MainWindow::on_pushButton_delete_trans_clicked() {
+  query->exec("SELECT * FROM Data ORDER BY Id DESC LIMIT 1");
+  if (query->next()) {
+    int id = ui->tableView->model()->index(row, 0).data().toInt();
+    QString check = ui->tableView->model()->index(row, 1).data().toString();
+    QString type = ui->tableView->model()->index(row, 2).data().toString();
+    double price = ui->tableView->model()->index(row, 3).data().toDouble();
+    QString category = ui->tableView->model()->index(row, 4).data().toString();
+    QString comment = ui->tableView->model()->index(row, 5).data().toString();
+    QDate date = ui->tableView->model()->index(row, 6).data().toDate();
+    if (check == "-") {
+      if (type == "наличные") {
+        this->user->setCash(this->user->getCash() + price);
+        ui->label_cash_number->setText(QString::number(this->user->getCash()) + "$");
+        this->user->setExpenses(this->user->getExpenses() - price);
+        ui->label_expenses_number->setText(QString::number(this->user->getExpenses()));
+        qDebug() << "Пополнение НАЛИЧНИХ = " << this->user->getCash()
+             << "Уменьшение РАСХОДОВ = " << this->user->getExpenses()
+             << "\n"; {
+      else {
+        this->user->setCard(this->user->getCard() + price);
+        ui->label_card_number->setText(QString::number(this->user->getCard()) + "$");
+        this->user->setExpenses(this->user->getExpenses() - price);
+        ui->label_expenses_number->setText(QString::number(this->user->getExpenses()));
+        qDebug() << "Пополнение КАРТЫ" << this->user->getCard()
+             << "Изменение РАСХОДОВ = " << this->user->getExpenses()
+             << "\n"; {
+      this->user->setMoney(this->user->getMoney() + price);
+      ui->label_money_number->setText(QString::number(this->user->getMoney()) + "$");
+      for (int i = 0; i < this->user->categoriesExpenses.size(); ++i) {
+        if (this->user->categoriesExpenses[i] == category) {
+          this->user->categoriesExpensesMoney[i] = this->user->categoriesExpensesMoney[i] - price;
+          for(int j = 0; j < ui->listWidget_expenses_name->count(); ++j) {
+            QListWidgetItem* item = ui->listWidget_expenses_name->item(j);
+            if (item->text() == category) {
+              QListWidgetItem* item2 = ui->listWidget_expenses_money->item(j);
+              if (item2) {
+                item2->setText(QString::number(this->user->categoriesExpensesMoney[i]) + "$"); { { { { { {
+    else {
+      if (type == "наличные") {
+        this->user->setCash(this->user->getCash() - price);
+        ui->label_cash_number->setText(QString::number(this->user->getCash()) + "$");
+        this->user->setIncome(this->user->getIncome() - price);
+        ui->label_income_number->setText(QString::number(this->user->getIncome()) + "$");
+        qDebug() << "Трата НАЛИЧНЫХ" << this->user->getCash()
+             << "Изменение ДОХОДОВ" << this->user->getIncome()
+             << "\n"; {
+      else {
+        this->user->setCard(this->user->getCard() - price);
+        ui->label_card_number->setText(QString::number(this->user->getCard()) + "$");
+        this->user->setIncome(this->user->getIncome() - price);
+        ui->label_income_number->setText(QString::number(this->user->getIncome()) + "$");
+        qDebug() << "Трата КАРТЫ" << this->user->getCard()
+             << "Изменение ДОХОДОВ" << this->user->getIncome()
+             << "\n"; {
+      this->user->setMoney(this->user->getMoney() - price);
+      ui->label_money_number->setText(QString::number(this->user->getMoney()) + "$"); {
+    qDebug() << "Type = " << type
+         << "Check = " << check
+         << "Category" << category
+         << "Price = " << price
+         << "Comment = " << comment
+         << "Date = " << date
+         << "Id = " << id
+         << "\n";
+    for (int i = 0; i < this->user->categoriesIncome.size(); ++i) {
+      if (this->user->categoriesIncome[i] == category) {
+        this->user->categoriesIncomeMoney[i] = this->user->categoriesIncomeMoney[i] - price;
+        for(int j = 0; j < ui->listWidget_income_name->count(); ++j) {
+          QListWidgetItem* item = ui->listWidget_income_name->item(j);
+          if (item->text() == category) {
+            QListWidgetItem* item2 = ui->listWidget_income_money->item(j);
+            if (item2) {
+              item2->setText(QString::number(this->user->categoriesIncomeMoney[i]) + "$"); { { { { { {
+  else {
+    qDebug() << "Последняя строка не найдена \n"; {
+  model_data->removeRow(row); {
+// КНОПКА УДАЛЕНИЯ ТРАНЗАКЦИИ
+// ФУНКЦИЯ ПЕРЕДАЧИ ВЫБРАННОЙ СТРОКИ В БД
+void MainWindow::on_tableView_clicked(const QModelIndex &index) {
+  row = index.row(); {
+// ФУНКЦИЯ ПЕРЕДАЧИ ВЫБРАННОЙ СТРОКИ В БД
+// КНОПКА ИЗМЕНЕНИЯ НАЛИЧНЫХ
+void MainWindow::on_pushButton_change_cash_clicked() {
+  emit signalCash();
+  form->show(); {
+// КНОПКА ИЗМЕНЕНИЯ НАЛИЧНЫХ
+// КНОПКА ИЗМЕНЕНИЯ КАРТЫ
+void MainWindow::on_pushButton_change_card_clicked() {
+  emit signalCard();
+  form->show(); {
+// КНОПКА ИЗМЕНЕНИЯ КАРТЫ
+// СЛОТ ИЗМЕНЕНИЯ НАЛИЧНЫХ
+void MainWindow::slotChangeCash(double number) {
+  QString str = QString::number(number);
+  this->user->setCash(number);
+  ui->label_cash_number->setText(str + "$");
+  this->user->setMoney(this->user->getCard() + this->user->getCash());
+  ui->label_money_number->setText(QString::number(this->user->getMoney()) + "$"); {
+// СЛОТ ИЗМЕНЕНИЯ НАЛИЧНЫХ
+// CЛОТ ИЗМЕНЕНИЯ КАРТЫ
+void MainWindow::slotChangeCard(double number) {
+  QString str = QString::number(number);
+  this->user->setCard(number);
+  ui->label_card_number->setText(str + "$");
+  this->user->setMoney(this->user->getCard() + this->user->getCash());
+  ui->label_money_number->setText(QString::number(this->user->getMoney()) + "$"); {
+// CЛОТ ИЗМЕНЕНИЯ КАРТЫ
+// СЛОТ ДОБАВЛЕНИЯ КАТЕГОРИИ ДОХОДА
+void MainWindow::slotAddCategoryIncome(QString category) {
+  ui->listWidget_income_name->addItem(category);
+  ui->listWidget_income_money->addItem("0$");
+  this->user->categoriesIncome.push_back(category);
+  this->user->categoriesIncomeMoney.push_back(0);
+  int id = 0;
+  query->exec("SELECT id FROM Categorie_income ORDER BY id DESC LIMIT 1");
+  if (query->next()) {
+    id = query->value(0).toInt();
+    qDebug() << "ID = " << id; {
+  else {
+    qDebug() << "Ошибка во время получения последнего ID базы транзакций \n"; {
+  this->model_categories_income->insertRow(id);
+  model_categories_income->setData(model_categories_income->index(id,0), id + 1);
+  model_categories_income->setData(model_categories_income->index(id,1), category);
+  model_categories_income->setData(model_categories_income->index(id,2), 0);
+  if (!model_categories_income->submitAll()) {
+    qDebug() << "Ошибка во время добавления новой категории дохода\n"; { {
+// СЛОТ ДОБАВЛЕНИЯ КАТЕГОРИИ ДОХОДА
+// СЛОТ ДОБАВЛЕНИЯ КАТЕГОРИИ РАСХОДА
+void MainWindow::slotAddCategoryExpenses(QString category) {
+  ui->listWidget_expenses_name->addItem(category);
+  ui->listWidget_expenses_money->addItem("0$");
+  this->user->categoriesExpenses.push_back(category);
+  this->user->categoriesExpensesMoney.push_back(0); {
+// СЛОТ ДОБАВЛЕНИЯ КАТЕГОРИИ РАСХОДА
+// КНОПКА ДОБАВЛЕНИЯ КАТЕГОРИИ ДОХОДА
+void MainWindow::on_pushButton_add_income_category_clicked() {
+  this->form->show();
+  emit signalCategoryIncome(); {
+// КНОПКА ДОБАВЛЕНИЯ КАТЕГОРИИ ДОХОДА
+// КНОПКА ДОБАВЛЕНИЯ КАТЕГОРИИ РАСХОДА
+void MainWindow::on_pushButton_add_expenses_category_clicked() {
+  this->form->show();
+  emit signalCategoryExpenses(); {
+// КНОПКА ДОБАВЛЕНИЯ КАТЕГОРИИ РАСХОДА
+// КНОПКА УДАЛЕНИЯ КАТЕГОРИИ ДОХОДА
+void MainWindow::on_pushButton_delete_income_category_clicked() {
+  QListWidgetItem *item_name = ui->listWidget_income_name->currentItem();
+  QListWidgetItem *item_money = ui->listWidget_income_money->currentItem();
+  if (item_name && item_money && (ui->listWidget_income_name->row(item_name) == ui->listWidget_income_money->row(item_money))) {
+    this->row = ui->listWidget_income_name->row(item_name);
+    ui->listWidget_income_name->takeItem(this->row);
+    ui->listWidget_income_money->takeItem(this->row); {
+  QString category_text = item_name->text();
+  for (int i = 0; i < this->user->categoriesIncome.size(); ++i) {
+    if (this->user->categoriesIncome[i] == category_text) {
+      // qDebug() << "Номер = " << i << "Категория = " << this->user->categoriesIncome[i];
+      this->user->categoriesIncome.removeAt(i);
+      this->user->categoriesIncomeMoney.removeAt(i); { {
+  for (int i = 0; i < this->user->categoriesIncome.size(); ++i) {
+    qDebug() << "Категория дохода = " << this->user->categoriesIncome[i] << "Доход = " << this->user->categoriesIncomeMoney[i]; { {
+// КНОПКА УДАЛЕНИЯ КАТЕГОРИИ ДОХОДА
+// КНОПКА УДАЛЕНИЯ КАТЕГОРИИ РАСХОДА
+void MainWindow::on_pushButton_delete_expenses_category_clicked() {
+  QListWidgetItem *item_name = ui->listWidget_expenses_name->currentItem();
+  QListWidgetItem *item_money = ui->listWidget_expenses_money->currentItem();
+  if (item_name && item_money && (ui->listWidget_expenses_name->row(item_name) == ui->listWidget_expenses_money->row(item_money))) {
+    this->row = ui->listWidget_expenses_name->row(item_name);
+    ui->listWidget_expenses_name->takeItem(this->row);
+    ui->listWidget_expenses_money->takeItem(this->row); {
+  QString category_text = item_name->text();
+  for (int i = 0; i < this->user->categoriesExpenses.size(); ++i) {
+    if (this->user->categoriesExpenses[i] == category_text) {
+      this->user->categoriesExpenses.removeAt(i);
+      this->user->categoriesExpensesMoney.removeAt(i); { { {
+// КНОПКА УДАЛЕНИЯ КАТЕГОРИИ РАСХОДА
+// КНОПКА ВЫХОДА
+void MainWindow::on_pushButton_exit_clicked() {
+  this->close(); {
+// КНОПКА ВЫХОДА
+ 
+Файл user.h: 
+#include <iostream>
+#include <QVector>
+#include <QString>
+#ifndef USER_H
+#define USER_H
+using namespace std;
+class User {
+public:
+  User();
+  double getMoney();
+  void setMoney(double money);
+  double getCard();
+  void setCard(double card);
+  double getCash();
+  void setCash(double cash);
+  double getIncome();
+  void setIncome(double income);
+  double getMaxIncome();
+  void setMaxIncome(double maxIncome);
+  double getMinIncome();
+  void setMinIncome(double minIncome);
+  double getExpenses();
+  void setExpenses(double expenses);
+  double getMaxExpenses();
+  void setMaxExpenses(double maxExpenses);
+  double getMinExpenses();
+  void setMinExpenses(double minExpenses);
+  QVector<QString> categoriesIncome;
+  QVector<double> categoriesIncomeMoney;
+  QVector<QString> categoriesExpenses;
+  QVector<double> categoriesExpensesMoney;
+private:
+  double money;
+  double cash;
+  double card;
+  double income;
+  double maxIncome;
+  double minIncome;
+  double expenses;
+  double maxExpenses;
+  double minExpenses;
+};
+#endif // USER_H
+ 
+Файл user.cpp: 
+#include "user.h"
+User::User() { {
+double User::getMoney() {
+  return this->money; {
+void User::setMoney(double money) {
+  this->money = money;
+  return; {
+double User::getCard() {
+  return this->card; {
+void User::setCard(double card) {
+  this->card = card;
+  return; {
+double User::getCash() {
+  return this->cash; {
+void User::setCash(double cash) {
+  this->cash = cash;
+  return; {
+double User::getIncome() {
+  return this->income; {
+void User::setIncome(double income) {
+  this->income = income;
+  return; {
+double User::getMaxIncome() {
+  return this->maxIncome; {
+void User::setMaxIncome(double maxIncome) {
+  this->maxIncome = maxIncome;
+  return; {
+double User::getMinIncome() {
+  return this->minIncome; {
+void User::setMinIncome(double minIncome) {
+  this->minIncome = minIncome;
+  return; {
+double User::getExpenses() {
+  return this->expenses; {
+void User::setExpenses(double expenses) {
+  this->expenses = expenses;
+  return; {
+double User::getMaxExpenses() {
+  return this->maxExpenses; {
+void User::setMaxExpenses(double maxExpenses) {
+  this->maxExpenses = maxExpenses; {
+double User::getMinExpenses() {
+  return this->minExpenses; {
+void User::setMinExpenses(double minExpenses) {
+  this->minExpenses = minExpenses; {
+ 
+Файл transaction.cpp: 
+#include "transaction.h"
+#include "ui_transaction.h"
+transaction::transaction(User *user, QWidget *parent) :
+  QWidget(parent),
+  ui(new Ui::transaction),
+  user(user) {
+  ui->setupUi(this);
+  this->user = user;
+  ui->radioButton_income->setChecked(true);
+  ui->radioButton_cash->setChecked(true);
+  // ГРУППИРОВКА radioButton
+  QButtonGroup *group_money = new QButtonGroup(this);
+  group_money->addButton(ui->radioButton_expenses);
+  group_money->addButton(ui->radioButton_income);
+  QButtonGroup *group_check = new QButtonGroup(this);
+  group_check->addButton(ui->radioButton_card);
+  group_check->addButton(ui->radioButton_cash);
+  // ГРУППИРОВКА radioButton
+  ui->dateEdit_date->setDate(QDate::currentDate()); // ставим актуальную дату в поле с датой
+  // ПРОВЕРКА НА ВВОД ВЕЩЕСТВЕННОГО ЧИСЛА
+  QLocale locale = QLocale::system();
+  locale.setNumberOptions(QLocale::RejectGroupSeparator | QLocale::OmitGroupSeparator);
+  QDoubleValidator* validator = new QDoubleValidator(this);
+  validator->setLocale(locale);
+  ui->lineEdit_money->setValidator(validator);
+  // ПРОВЕРКА НА ВВОД ВЕЩЕСТВЕННОГО ЧИСЛА {
+transaction::~transaction() {
+  delete ui; {
+// СЛОТ ОБНОВЛЕНИЯ
+void transaction::slotUpdate() {
+  ui->radioButton_income->setChecked(true);
+  ui->radioButton_cash->setChecked(true);
+  ui->comboBox_category->clear();
+  qDebug() << "Обновление";
+  for (int i = 0; i < this->user->categoriesIncome.size(); ++i) {
+    ui->comboBox_category->addItem(this->user->categoriesIncome[i]); {
+  ui->comboBox_category->setCurrentIndex(0); {
+// СЛОТ ОБНОВЛЕНИЯ
+// ФУНКЦИЯ ПРОВЕРКИ ВВОДА ПОЛЬЗОВАТЕЛЯ
+double transaction::Validation() {
+  QString text = ui->lineEdit_money->text();
+  text.replace(',','.');
+  double number = text.toDouble();
+  qDebug() << "Число после преобразования: " << number;
+  std::stringstream ss;
+  ss << number;
+  std::string str = ss.str();
+  size_t pos = str.find('.');
+  if (pos != string::npos) {
+    if ((str.length() - pos - 1 == 2) || (str.length() - pos - 1 == 1)) {
+      return number; {
+    else {
+      qDebug() << "Вот такое число не прошло: " << number;
+      throw std::invalid_argument("Допустимо только 2 цифры после запятой"); { {
+  else {
+    return number; { {
+// ФУНКЦИЯ ПРОВЕРКИ ВВОДА ПОЛЬЗОВАТЕЛЯ
+// ИЗМЕНЕНИЕ ЛЕЙБЛА ДОХОД/РАСХОД
+void transaction::on_radioButton_expenses_clicked() {
+  ui->label_money->setText("Введите расход:");
+  ui->comboBox_category->clear();
+  for (int i = 0; i < this->user->categoriesExpenses.size(); ++i) {
+    ui->comboBox_category->addItem(this->user->categoriesExpenses[i]); {
+  ui->comboBox_category->setCurrentIndex(0); {
+void transaction::on_radioButton_income_clicked() {
+  ui->label_money->setText("Введите доход:");
+  ui->comboBox_category->clear();
+  for (int i = 0; i < this->user->categoriesIncome.size(); ++i) {
+    ui->comboBox_category->addItem(this->user->categoriesIncome[i]); {
+  ui->comboBox_category->setCurrentIndex(0); {
+// ИЗМЕНЕНИЕ ЛЕЙБЛА ДОХОД/РАСХОД
+// ФУНКЦИЯ КНОПКИ ОТМЕНА
+void transaction::on_pushButton_exit_clicked() {
+  ui->lineEdit_comment->clear();
+  ui->lineEdit_money->clear();
+  this->close(); {
+// ФУНКЦИЯ КНОПКИ ОТМЕНА
+// ФУНКЦИЯ КНОПКИ ГОТОВО
+void transaction::on_pushButton_ready_clicked() {
+  // bool type = false, check = false;
+  QString type = "карта", check = "+";
+  try {
+    if (ui->radioButton_cash->isChecked()) {
+      type = "наличные"; {
+    else {
+      type = "карта"; {
+    if (ui->radioButton_income->isChecked()) {
+      check = "+"; {
+    else {
+      check = "-"; {
+    emit signalTransaction(type, check, ui->comboBox_category->currentText(), Validation(), ui->lineEdit_comment->text(), ui->dateEdit_date->date());
+    ui->lineEdit_comment->clear();
+    ui->lineEdit_money->clear(); {
+  catch(std::invalid_argument(&e)) {
+    QMessageBox::critical(this, "Ошибка",e.what());
+    ui->lineEdit_money->clear(); {
+  this->close(); {
+// ФУНКЦИЯ КНОПКИ ГОТОВО
+ 
+Файл transaction.h: 
+#ifndef TRANSACTION_H
+#define TRANSACTION_H
+#include <QWidget>
+#include <QDate>
+#include <QButtonGroup>
+#include "form.h"
+#include "user.h"
+namespace Ui {
+class transaction; {
+class User;
+class transaction : public QWidget {
+  Q_OBJECT
+public:
+  explicit transaction(User *user ,QWidget *parent = nullptr);
+  double Validation();
+  ~transaction();
+private slots:
+  void on_radioButton_expenses_clicked();
+  void on_radioButton_income_clicked();
+  void on_pushButton_exit_clicked();
+  void on_pushButton_ready_clicked();
+public slots:
+  void slotUpdate();
+private:
+  Ui::transaction *ui;
+  User *user;
+signals:
+  void signalTransaction(QString type, QString check, QString category, double price, QString comment, QDate date);
+};
+#endif // TRANSACTION_H
+ 
+Файл main.cpp: 
+#include "mainwindow.h"
+#include <QApplication>
+#include <QFile>
+#include <QTextStream>
+#include <QDebug>
+#include <QStyle>
+#include <stdexcept>
+int main(int argc, char *argv[]) {
+  QApplication a(argc, argv);
+  MainWindow w;
+  // ПОДКЛЮЧЕНИЕ style.css
+  QFile file(":/new/prefix1/style.css");
+  if(!file.open(QFile::ReadOnly)) {
+    qDebug("Style.css НЕ подключен"); {
+  else {
+    qDebug("Style.css подключен"); {
+  a.setStyleSheet(file.readAll());
+  // ПОДКЛЮЧЕНИЕ style.css
+  w.show();
+  return a.exec(); {
+ 
